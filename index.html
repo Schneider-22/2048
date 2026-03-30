@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>2048 数字益智游戏</title>
     <style>
         * {
@@ -171,7 +171,7 @@
             font-weight: bold;
             font-size: 1.8rem;
             border-radius: 4px;
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
             z-index: 10;
         }
         
@@ -256,23 +256,126 @@
             font-size: 0.9rem;
         }
         
+        /* 响应式设计 */
         @media (max-width: 520px) {
             h1 {
                 font-size: 2.8rem;
             }
             
+            .subtitle {
+                font-size: 1rem;
+            }
+            
             .game-info {
                 flex-direction: column;
                 align-items: center;
-                gap: 15px;
+                gap: 10px;
             }
             
             .score-container, .best-container, .controls {
                 width: 100%;
+                padding: 10px 15px;
+            }
+            
+            .score, .best {
+                font-size: 1.5rem;
+            }
+            
+            .instructions {
+                padding: 12px;
+                font-size: 0.8rem;
+            }
+            
+            .game-container {
+                padding: 10px;
+            }
+            
+            .grid-background {
+                gap: 8px;
+                padding: 8px;
+            }
+            
+            .tile-container {
+                padding: 8px;
             }
             
             .tile {
                 font-size: 1.5rem;
+            }
+            
+            .game-message p {
+                font-size: 1.5rem;
+            }
+            
+            .message-btn {
+                padding: 8px 16px;
+            }
+        }
+        
+        @media (max-width: 400px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .subtitle {
+                font-size: 0.9rem;
+            }
+            
+            .game-container {
+                padding: 8px;
+            }
+            
+            .grid-background {
+                gap: 6px;
+                padding: 6px;
+            }
+            
+            .tile-container {
+                padding: 6px;
+            }
+            
+            .tile {
+                font-size: 1.3rem;
+            }
+            
+            .game-message p {
+                font-size: 1.3rem;
+            }
+        }
+        
+        @media (max-width: 320px) {
+            body {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .subtitle {
+                font-size: 0.8rem;
+                margin-bottom: 15px;
+            }
+            
+            .instructions {
+                margin-bottom: 15px;
+            }
+            
+            .game-container {
+                margin-bottom: 15px;
+            }
+            
+            .tile {
+                font-size: 1.1rem;
+            }
+            
+            .game-message p {
+                font-size: 1.1rem;
+            }
+            
+            .message-btn {
+                padding: 6px 12px;
+                font-size: 0.9rem;
             }
         }
     </style>
@@ -301,7 +404,7 @@
         </div>
         
         <div class="instructions">
-            <p><strong>游戏规则：</strong>使用键盘方向键（↑↓←→）移动方块。当两个相同数字的方块碰撞时，它们会合并成一个新的方块，数字是它们的和。每次移动后，会在空白位置生成一个新的数字方块（2或4）。目标是通过合并方块得到2048！</p>
+            <p><strong>游戏规则：</strong>使用键盘方向键（↑↓←→）或触摸滑动移动方块。当两个相同数字的方块碰撞时，它们会合并成一个新的方块，数字是它们的和。每次移动后，会在空白位置生成一个新的数字方块（2或4）。目标是通过合并方块得到2048！</p>
         </div>
         
         <div class="game-container">
@@ -334,7 +437,7 @@
                 </div>
             </div>
             
-            <p class="key-instructions">使用键盘方向键（↑ ↓ ← →）移动方块</p>
+            <p class="key-instructions">使用键盘方向键（↑ ↓ ← →）或触摸滑动移动方块</p>
         </div>
         
         <div class="footer">
@@ -471,7 +574,7 @@
                 tile.id = `tile-${tileIdCounter++}`;
                 
                 // 设置方块位置和大小
-                const tileSize = 22.5; // 每个方块占网格的百分比 (100% - 3*间隙) / 4
+                const tileSize = (100 - 3 * 2.5) / 4; // 每个方块占网格的百分比 (100% - 3*间隙) / 4
                 const gap = 2.5; // 间隙百分比
                 
                 tile.style.width = `${tileSize}%`;
@@ -505,8 +608,16 @@
                 const oldGrid = grid.map(row => [...row]);
                 let moved = false;
                 let moveScore = 0;
-                const newTiles = [];
-                const mergedTiles = [];
+                
+                // 保存移动前的方块位置
+                const oldPositions = [];
+                for (let r = 0; r < gridSize; r++) {
+                    for (let c = 0; c < gridSize; c++) {
+                        if (grid[r][c] !== 0) {
+                            oldPositions.push({ row: r, col: c, value: grid[r][c] });
+                        }
+                    }
+                }
                 
                 // 根据方向处理移动
                 switch (direction) {
@@ -710,12 +821,7 @@
             document.addEventListener('touchstart', function(event) {
                 touchStartX = event.touches[0].clientX;
                 touchStartY = event.touches[0].clientY;
-                event.preventDefault();
-            }, { passive: false });
-            
-            document.addEventListener('touchmove', function(event) {
-                event.preventDefault();
-            }, { passive: false });
+            }, { passive: true });
             
             document.addEventListener('touchend', function(event) {
                 if (!touchStartX || !touchStartY || (gameOver && !gameWon)) return;
@@ -729,7 +835,7 @@
                 // 确定滑动方向
                 if (Math.abs(dx) > Math.abs(dy)) {
                     // 水平滑动
-                    if (Math.abs(dx) > 30) {
+                    if (Math.abs(dx) > 20) { // 减小滑动阈值，提高响应速度
                         if (dx > 0) {
                             move('right');
                         } else {
@@ -738,7 +844,7 @@
                     }
                 } else {
                     // 垂直滑动
-                    if (Math.abs(dy) > 30) {
+                    if (Math.abs(dy) > 20) { // 减小滑动阈值，提高响应速度
                         if (dy > 0) {
                             move('down');
                         } else {
@@ -749,8 +855,7 @@
                 
                 touchStartX = null;
                 touchStartY = null;
-                event.preventDefault();
-            }, { passive: false });
+            }, { passive: true });
             
             // 重新开始按钮
             restartBtn.addEventListener('click', initGame);
