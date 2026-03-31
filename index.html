@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2048 数字益智游戏</title>
-    <style>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>2048 数字益智游戏</title>
+        <!-- Firebase SDK -->
+        <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+        <style>
         * {
             margin: 0;
             padding: 0;
@@ -160,11 +163,13 @@
             left: 0;
             width: 100%;
             height: 100%;
-            padding: 10px;
+            padding: 4px;
         }
         
         .tile {
             position: absolute;
+            width: calc(25% - 10px);
+            height: calc(25% - 10px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -410,11 +415,25 @@
         </div>
         
         <div class="footer">
-            <p>2048 游戏 | 使用 HTML、CSS 和 JavaScript 实现</p>
         </div>
     </div>
 
     <script>
+        // Firebase配置
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        
+        // 初始化Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        
         // 游戏主逻辑
         document.addEventListener('DOMContentLoaded', function() {
             // 游戏状态变量
@@ -457,42 +476,56 @@
             
             // 增加访问量
             function incrementPlayCount() {
-                let playCount = localStorage.getItem('playCount2048') || 0;
-                playCount = parseInt(playCount) + 1;
-                localStorage.setItem('playCount2048', playCount);
-                playCountElement.textContent = playCount;
+                // 从Firebase获取当前游玩人数
+                database.ref('playCount').once('value', (snapshot) => {
+                    let playCount = snapshot.val() || 0;
+                    playCount = parseInt(playCount) + 1;
+                    // 更新到Firebase
+                    database.ref('playCount').set(playCount);
+                    playCountElement.textContent = playCount;
+                });
             }
             
             // 提交分数到排行榜
             function submitScoreToRanking(score) {
-                // 获取现有排行榜数据
-                let ranking = localStorage.getItem('ranking2048');
-                ranking = ranking ? JSON.parse(ranking) : [];
-                
-                // 添加分数到排行榜
-                ranking.push(score);
-                
-                // 去重并按降序排序
-                ranking = [...new Set(ranking)].sort((a, b) => b - a);
-                
-                // 只保留前10名
-                ranking = ranking.slice(0, 10);
-                
-                // 保存排行榜数据
-                localStorage.setItem('ranking2048', JSON.stringify(ranking));
-                
-                // 更新排行榜显示
-                displayRanking(ranking);
+                // 从Firebase获取现有排行榜数据
+                database.ref('ranking').once('value', (snapshot) => {
+                    let ranking = snapshot.val() || [];
+                    
+                    // 添加分数到排行榜
+                    ranking.push(score);
+                    
+                    // 去重并按降序排序
+                    ranking = [...new Set(ranking)].sort((a, b) => b - a);
+                    
+                    // 只保留前10名
+                    ranking = ranking.slice(0, 10);
+                    
+                    // 保存排行榜数据到Firebase
+                    database.ref('ranking').set(ranking);
+                    
+                    // 更新排行榜显示
+                    displayRanking(ranking);
+                });
             }
             
             // 更新排行榜
             function updateRanking() {
-                // 获取现有排行榜数据
-                let ranking = localStorage.getItem('ranking2048');
-                ranking = ranking ? JSON.parse(ranking) : [];
-                
-                // 显示排行榜
-                displayRanking(ranking);
+                // 从Firebase获取排行榜数据
+                database.ref('ranking').once('value', (snapshot) => {
+                    let ranking = snapshot.val() || [];
+                    
+                    // 显示排行榜
+                    displayRanking(ranking);
+                });
+            }
+            
+            // 获取并显示游玩人数
+            function getPlayCount() {
+                database.ref('playCount').once('value', (snapshot) => {
+                    let playCount = snapshot.val() || 0;
+                    playCountElement.textContent = playCount;
+                });
             }
             
             // 显示排行榜
@@ -608,13 +641,30 @@
                 tile.id = `tile-${tileIdCounter++}`;
                 
                 // 设置方块位置和大小
-                const tileSize = (100 - 3 * 2.5) / 4; // 每个方块占网格的百分比 (100% - 3*间隙) / 4
-                const gap = 2.5; // 间隙百分比
+                // const tileSize = (100 - 3 * 2.1739) / 4; // 每个方块占网格的百分比 (100% - 3*间隙) / 4
+                // const gap = 2.1739; // 间隙百分比，与grid-background的10px间隙一致（基于460px容器）
                 
-                tile.style.width = `${tileSize}%`;
-                tile.style.height = `${tileSize}%`;
-                tile.style.left = `${col * (tileSize + gap) + gap}%`;
-                tile.style.top = `${row * (tileSize + gap) + gap}%`;
+                // tile.style.width = `${tileSize}%`;
+                // tile.style.height = `${tileSize}%`;
+                // tile.style.left = `${col * (tileSize + gap) + gap}%`;
+                // tile.style.top = `${row * (tileSize + gap) + gap}%`;
+                const container = tileContainer.parentElement; // grid-container
+const containerSize = container.clientWidth;
+
+const padding = 10; // grid-background padding
+const gap = 10;     // grid gap
+const gridSize = 4;
+
+// 每个格子的真实像素大小
+const cellSize = (containerSize - padding * 2 - gap * (gridSize - 1)) / gridSize;
+
+// 设置 tile 尺寸
+tile.style.width = `${cellSize}px`;
+tile.style.height = `${cellSize}px`;
+
+// 设置位置（关键）
+tile.style.left = `${padding + col * (cellSize + gap)}px`;
+tile.style.top = `${padding + row * (cellSize + gap)}px`;
                 
                 // 设置方块颜色和字体大小
                 const colorConfig = tileColors[value] || { background: '#3c3a32', color: '#f9f6f2', fontSize: '1.1rem' };
@@ -914,7 +964,7 @@
             incrementPlayCount();
             
             // 显示当前访问量
-            playCountElement.textContent = localStorage.getItem('playCount2048') || 0;
+            getPlayCount();
             
             // 显示排行榜
             updateRanking();
