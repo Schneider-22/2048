@@ -171,7 +171,7 @@
             font-weight: bold;
             font-size: 1.8rem;
             border-radius: 4px;
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
             z-index: 10;
         }
         
@@ -231,6 +231,17 @@
             transition: all 0.2s ease;
         }
         
+        .final-score {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #ff9a00;
+        }
+        
+        .submit-score-btn {
+            background: linear-gradient(45deg, #9c27b0, #7b1fa2);
+            color: white;
+        }
+        
         .continue-btn {
             background: linear-gradient(45deg, #4CAF50, #2E7D32);
             color: white;
@@ -245,6 +256,59 @@
             width: 100%;
             text-align: center;
             margin-top: 10px;
+            color: #a9b7c6;
+            font-size: 0.9rem;
+        }
+        
+        .ranking-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 460px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .ranking-container h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #fff;
+            font-size: 1.2rem;
+        }
+        
+        .ranking-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .ranking-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        .ranking-number {
+            font-weight: bold;
+            color: #ff9a00;
+            min-width: 25px;
+        }
+        
+        .ranking-score {
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .play-count {
+            text-align: center;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
             color: #a9b7c6;
             font-size: 0.9rem;
         }
@@ -337,6 +401,14 @@
             <p class="key-instructions">使用键盘方向键（↑ ↓ ← →）移动方块</p>
         </div>
         
+        <div class="ranking-container">
+            <h3>排行榜</h3>
+            <div class="ranking-list" id="ranking-list">
+                <!-- 排名将在这里动态生成 -->
+            </div>
+            <div class="play-count">游玩人数：<span id="play-count">0</span></div>
+        </div>
+        
         <div class="footer">
             <p>2048 游戏 | 使用 HTML、CSS 和 JavaScript 实现</p>
         </div>
@@ -360,6 +432,8 @@
             const bestElement = document.querySelector('.best');
             const restartBtn = document.getElementById('restart-btn');
             const gameMessage = document.getElementById('game-message');
+            const rankingList = document.getElementById('ranking-list');
+            const playCountElement = document.getElementById('play-count');
             
             // 初始化最佳分数显示
             bestElement.textContent = bestScore;
@@ -380,6 +454,69 @@
                 4096: { background: '#3c3a32', color: '#f9f6f2', fontSize: '1.2rem' },
                 8192: { background: '#0c0a08', color: '#f9f6f2', fontSize: '1.2rem' }
             };
+            
+            // 增加访问量
+            function incrementPlayCount() {
+                let playCount = localStorage.getItem('playCount2048') || 0;
+                playCount = parseInt(playCount) + 1;
+                localStorage.setItem('playCount2048', playCount);
+                playCountElement.textContent = playCount;
+            }
+            
+            // 提交分数到排行榜
+            function submitScoreToRanking(score) {
+                // 获取现有排行榜数据
+                let ranking = localStorage.getItem('ranking2048');
+                ranking = ranking ? JSON.parse(ranking) : [];
+                
+                // 添加分数到排行榜
+                ranking.push(score);
+                
+                // 去重并按降序排序
+                ranking = [...new Set(ranking)].sort((a, b) => b - a);
+                
+                // 只保留前10名
+                ranking = ranking.slice(0, 10);
+                
+                // 保存排行榜数据
+                localStorage.setItem('ranking2048', JSON.stringify(ranking));
+                
+                // 更新排行榜显示
+                displayRanking(ranking);
+            }
+            
+            // 更新排行榜
+            function updateRanking() {
+                // 获取现有排行榜数据
+                let ranking = localStorage.getItem('ranking2048');
+                ranking = ranking ? JSON.parse(ranking) : [];
+                
+                // 显示排行榜
+                displayRanking(ranking);
+            }
+            
+            // 显示排行榜
+            function displayRanking(ranking) {
+                rankingList.innerHTML = '';
+                
+                if (ranking.length === 0) {
+                    const emptyItem = document.createElement('div');
+                    emptyItem.className = 'ranking-item';
+                    emptyItem.textContent = '暂无排名数据';
+                    rankingList.appendChild(emptyItem);
+                    return;
+                }
+                
+                ranking.forEach((score, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'ranking-item';
+                    item.innerHTML = `
+                        <span class="ranking-number">${index + 1}</span>
+                        <span class="ranking-score">${score}</span>
+                    `;
+                    rankingList.appendChild(item);
+                });
+            }
             
             // 初始化游戏
             function initGame() {
@@ -471,7 +608,7 @@
                 tile.id = `tile-${tileIdCounter++}`;
                 
                 // 设置方块位置和大小
-                const tileSize = 22.5; // 每个方块占网格的百分比 (100% - 3*间隙) / 4
+                const tileSize = (100 - 3 * 2.5) / 4; // 每个方块占网格的百分比 (100% - 3*间隙) / 4
                 const gap = 2.5; // 间隙百分比
                 
                 tile.style.width = `${tileSize}%`;
@@ -505,8 +642,16 @@
                 const oldGrid = grid.map(row => [...row]);
                 let moved = false;
                 let moveScore = 0;
-                const newTiles = [];
-                const mergedTiles = [];
+                
+                // 保存移动前的方块位置
+                const oldPositions = [];
+                for (let r = 0; r < gridSize; r++) {
+                    for (let c = 0; c < gridSize; c++) {
+                        if (grid[r][c] !== 0) {
+                            oldPositions.push({ row: r, col: c, value: grid[r][c] });
+                        }
+                    }
+                }
                 
                 // 根据方向处理移动
                 switch (direction) {
@@ -657,7 +802,9 @@
             function showGameMessage(message, isWin) {
                 gameMessage.innerHTML = `
                     <p>${message}</p>
+                    <p class="final-score">最终得分：${score}</p>
                     <div class="message-buttons">
+                        ${!isWin ? '<button class="message-btn submit-score-btn" id="submit-score-btn">将分数添加到排行榜</button>' : ''}
                         <button class="message-btn continue-btn" id="continue-btn">${isWin ? '继续游戏' : '再试一次'}</button>
                         <button class="message-btn try-again-btn" id="try-again-btn">新游戏</button>
                     </div>
@@ -676,6 +823,14 @@
                 });
                 
                 document.getElementById('try-again-btn').addEventListener('click', initGame);
+                
+                // 添加提交分数按钮事件监听器
+                if (!isWin && document.getElementById('submit-score-btn')) {
+                    document.getElementById('submit-score-btn').addEventListener('click', function() {
+                        submitScoreToRanking(score);
+                        gameMessage.style.display = 'none';
+                    });
+                }
             }
             
             // 键盘控制
@@ -754,6 +909,15 @@
             
             // 重新开始按钮
             restartBtn.addEventListener('click', initGame);
+            
+            // 增加访问量
+            incrementPlayCount();
+            
+            // 显示当前访问量
+            playCountElement.textContent = localStorage.getItem('playCount2048') || 0;
+            
+            // 显示排行榜
+            updateRanking();
             
             // 初始化游戏
             initGame();
